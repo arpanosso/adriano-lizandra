@@ -1,0 +1,57 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  error = FALSE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+# Análise Adriano - Lizandra
+
+## Análise para Macroscópica
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(ExpDes.pt)
+macroscopia <- read_excel("data/macroscopia.xlsx",na = "NA")
+head(macroscopia)
+```
+
+### Coleta 01
+```{r}
+dados <- macroscopia %>% 
+  filter(coleta==1)
+
+for( i in 5:length(macroscopia)){
+  variavel <- names(macroscopia[i])
+  df <- dados %>% 
+    select(data,trat,variavel)
+  names(df) <- c("data","trat","y")
+  plot_1 <- df %>% 
+  group_by(data, trat) %>% 
+  ggplot(aes(y=y, x= as.factor(trat), fill=as.factor(trat))) +
+  geom_boxplot() +
+  facet_wrap(~data)+
+  theme_bw() +
+  labs(x="Tratamentos", y=variavel)+
+  theme(legend.position="none")
+  print(plot_1)
+  dia <- df %>% pull(data)
+  trat <- df %>% pull(trat)
+  y <- df %>%  pull(y)
+  fat2.dic(dia, trat, y, fac.names = c("Dia","Trat"))
+}
+```
+
+### Coleta 02
+
+### Coleta 03
