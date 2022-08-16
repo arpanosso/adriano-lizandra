@@ -22,6 +22,10 @@ knitr::opts_chunk$set(
 library(tidyverse)
 library(readxl)
 library(ExpDes.pt)
+library(emmeans)
+library(lmerTest)
+library(ggpubr)
+library(rstatix)
 macroscopia <- read_excel("data/macroscopia.xlsx",na = "NA")
 head(macroscopia)
 ```
@@ -53,5 +57,160 @@ for( i in 5:length(macroscopia)){
 ```
 
 ### Coleta 02
+```{r}
+dados <- macroscopia %>% 
+  filter(coleta==2)
 
+for( i in 5:length(macroscopia)){
+  variavel <- names(macroscopia[i])
+  df <- dados %>% 
+    select(data,trat,variavel)
+  names(df) <- c("data","trat","y")
+  plot_1 <- df %>% 
+  group_by(data, trat) %>% 
+  ggplot(aes(y=y, x= as.factor(trat), fill=as.factor(trat))) +
+  geom_boxplot() +
+  facet_wrap(~data)+
+  theme_bw() +
+  labs(x="Tratamentos", y=variavel)+
+  theme(legend.position="none")
+  print(plot_1)
+  dia <- df %>% pull(data)
+  trat <- df %>% pull(trat)
+  y <- df %>%  pull(y)
+  fat2.dic(dia, trat, y, fac.names = c("Dia","Trat"))
+}
+```
 ### Coleta 03
+```{r}
+dados <- macroscopia %>% 
+  filter(coleta==3)
+
+for( i in 5:length(macroscopia)){
+  variavel <- names(macroscopia[i])
+  df <- dados %>% 
+    select(data,trat,variavel)
+  names(df) <- c("data","trat","y")
+  plot_1 <- df %>% 
+  group_by(data, trat) %>% 
+  ggplot(aes(y=y, x= as.factor(trat), fill=as.factor(trat))) +
+  geom_boxplot() +
+  facet_wrap(~data)+
+  theme_bw() +
+  labs(x="Tratamentos", y=variavel)+
+  theme(legend.position="none")
+  print(plot_1)
+  dia <- df %>% pull(data)
+  trat <- df %>% pull(trat)
+  y <- df %>%  pull(y)
+  fat2.dic(dia, trat, y, fac.names = c("Dia","Trat"))
+}
+```
+
+## Análise para Consumo de H~2~O
+```{r}
+consumo_H2O <- read_excel("data/consumo_H2O.xlsx")
+head(consumo_H2O)
+```
+
+## Análise por dia
+
+```{r}
+consumo_H2O %>% 
+  group_by(data, trat) %>% 
+  summarise(vol_con = mean(vol_con, na.rm=TRUE)) %>% 
+  ggplot(aes(x=data, y=vol_con, color=as.factor(trat))) +
+  geom_point() +
+  geom_line() +
+  theme_bw()+
+  labs(color="Tratamento")
+```
+
+```{r}
+# trat <- as.factor(consumo_H2O %>% pull(trat))
+# dia <- as.factor(consumo_H2O %>%  pull(data))
+# vol_con <- consumo_H2O %>% pull(vol_con)
+# modelo <- lme4::lmer(vol_con ~ dia+ trat + dia:trat + (1|dia),REML=F )
+# summary(modelo)
+# print(anova(modelo))
+# plot(modelo)
+# post_hoc = emmeans(modelo, ~ trat*dia)
+# pairs(post_hoc, adjust="tukey") %>% print()
+```
+
+## Análise por semana
+
+
+```{r}
+consumo_H2O <- consumo_H2O %>% 
+  mutate(semana = case_when(
+    data <= "2022-04-13" ~ 1,
+    data <= "2022-04-20" ~ 2,
+    data <= "2022-04-27" ~ 3,
+    data <= "2022-05-04" ~ 4,
+    data <= "2022-05-11" ~ 5,
+    data <= "2022-05-16" ~ 6
+  )) 
+consumo_H2O %>% 
+  group_by(semana, trat) %>% 
+  summarise(vol_con = mean(vol_con, na.rm=TRUE)) %>% 
+  ggplot(aes(x=semana, y=vol_con, color=as.factor(trat))) +
+  geom_point() +
+  geom_line() +
+  theme_bw()+
+  labs(color="Tratamento")
+```
+
+```{r}
+# trat <- as.factor(consumo_H2O %>% pull(trat))
+# semana <- as.factor(consumo_H2O %>%  pull(semana))
+# vol_con <- consumo_H2O %>% pull(vol_con)
+# modelo <- lme4::lmer(vol_con ~ semana+trat+ semana:trat + (1|semana))
+# summary(modelo)
+# print(anova(modelo))
+# plot(modelo)
+# post_hoc = emmeans(modelo, ~ trat*semana)
+# pairs(post_hoc, adjust="tukey") %>% print()
+```
+
+
+## Análise por dia teste *t de Student*
+
+```{r}
+dias <- consumo_H2O %>% pull(data) %>% unique()
+for(i in seq_along(dias)){
+  df <- consumo_H2O %>% filter(data == dias[i])
+  trat <- df$trat %>% as.factor()
+  vol_con <- df$vol_con
+  pVar <- var.test(vol_con ~ trat)$p.value
+  print("======================================")
+  print(paste0("              Data ",dias[i]))
+  print("======================================")
+  if(pVar > 0.05){
+    t.test(vol_con ~ trat,alternative="t",var.equal=FALSE) %>% print()
+  }else{
+    t.test(vol_con ~ trat,alternative="t",var.equal=TRUE) %>% print()
+  }
+}
+```
+
+## Análise por semana teste *t de Student*
+
+```{r}
+for(i in 1:6){
+  df <- consumo_H2O %>% filter(semana == i)
+  trat <- df$trat %>% as.factor()
+  vol_con <- df$vol_con
+  pVar <- var.test(vol_con ~ trat)$p.value
+  print("======================================")
+  print(paste0("              Semana ",i))
+  print("======================================")
+  if(pVar > 0.05){
+    t.test(vol_con ~ trat,alternative="t",var.equal=FALSE) %>% print()
+  }else{
+    t.test(vol_con ~ trat,alternative="t",var.equal=TRUE) %>% print()
+  }
+}
+```
+
+
